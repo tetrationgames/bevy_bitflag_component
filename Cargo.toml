@@ -1,0 +1,10 @@
+[package]
+name = "bevy_bitflag_component"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Row-level bitflags query filters for Bevy ECS"
+
+[dependencies]
+bevy_ecs = "0.20"
+bitflags = "2"
