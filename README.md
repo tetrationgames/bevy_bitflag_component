@@ -63,4 +63,8 @@ and none for `WithAnyFlags`.
 - `MASK` is a `u64`; the component must implement `Into<u64>` for its `Bits`
   type (`u8`, `u16`, `u32`, `u64`). Masks with bits above the storage width
   panic at query initialization instead of silently matching nothing.
+- The const parameter cannot be `C::Bits`: stable Rust rejects const parameters
+  whose type depends on another generic parameter (`E0770`), and `From`/`Into`
+  are not const. Define masks once as `u64` constants; the cast is per mask,
+  not per query. `{ Status::FROZEN.bits() as _ }` also works inline.
 - The mask is a const generic, so masks must be known at compile time.

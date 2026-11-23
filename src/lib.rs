@@ -88,6 +88,13 @@
 //! `u32`, `u64`). The mask is checked when the query is initialized: bits that
 //! do not fit in `C::Bits` panic instead of silently never matching. Because
 //! the mask is a const generic, masks must be known at compile time.
+//!
+//! The const parameter cannot be typed as `C::Bits`: stable Rust rejects a
+//! const parameter whose type depends on another generic parameter (`E0770`),
+//! and `From`/`Into` are not const. Define each mask once as a `u64` constant
+//! (`const FROZEN: u64 = Status::FROZEN.bits() as u64;`) and reuse it; the cast
+//! is needed once per mask, not once per query. Where the target type is
+//! inferable, `{ Status::FROZEN.bits() as _ }` also works inline.
 
 use core::{any::type_name, marker::PhantomData};
 
@@ -98,7 +105,7 @@ use bevy_ecs::{
     entity::Entity,
     query::{FilteredAccess, FilteredAccessSet, QueryData, QueryFilter, WorldQuery},
     storage::{Table, TableRow},
-    world::{unsafe_world_cell::UnsafeWorldCell, World},
+    world::{World, unsafe_world_cell::UnsafeWorldCell},
 };
 use bitflags::{Bits, Flags};
 
@@ -197,7 +204,9 @@ macro_rules! impl_flag_filter {
                 last_run: Tick,
                 this_run: Tick,
             ) -> Self::Fetch<'w> {
-                <&C as WorldQuery>::init_fetch(world, state, last_run, this_run)
+                // SAFETY: The invariants are forwarded from this method's
+                // caller to the inner query fetch.
+                unsafe { <&C as WorldQuery>::init_fetch(world, state, last_run, this_run) }
             }
 
             const IS_DENSE: bool = matches!(C::STORAGE_TYPE, StorageType::Table);
@@ -209,7 +218,11 @@ macro_rules! impl_flag_filter {
                 archetype: &'w Archetype,
                 table: &'w Table,
             ) {
-                <&C as WorldQuery>::set_archetype(fetch, state, archetype, table);
+                // SAFETY: The invariants are forwarded from this method's
+                // caller to the inner query fetch.
+                unsafe {
+                    <&C as WorldQuery>::set_archetype(fetch, state, archetype, table);
+                }
             }
 
             #[inline]
@@ -218,7 +231,9 @@ macro_rules! impl_flag_filter {
                 state: &Self::State,
                 table: &'w Table,
             ) {
-                <&C as WorldQuery>::set_table(fetch, state, table);
+                // SAFETY: The invariants are forwarded from this method's
+                // caller to the inner query fetch.
+                unsafe { <&C as WorldQuery>::set_table(fetch, state, table) }
             }
 
             #[inline]
